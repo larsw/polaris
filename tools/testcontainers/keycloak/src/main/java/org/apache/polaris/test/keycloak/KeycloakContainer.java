@@ -50,6 +50,7 @@ public class KeycloakContainer extends GenericContainer<KeycloakContainer>
   private static final String ADMIN_USERNAME = "admin";
   private static final String ADMIN_PASSWORD = "admin";
 
+  private URI baseUrl;
   private URI issuerUrl;
   private URI tokenEndpoint;
   private HttpClient httpClient;
@@ -72,11 +73,24 @@ public class KeycloakContainer extends GenericContainer<KeycloakContainer>
     withLogConsumer(new Slf4jLogConsumer(LOGGER));
   }
 
+  /**
+   * Enables Keycloak features that are not on by default, such as the experimental {@code authzen}
+   * feature.
+   *
+   * <p>Must be called before {@link #start()}.
+   */
+  @SuppressWarnings("resource")
+  public KeycloakContainer withFeatures(String... features) {
+    Preconditions.checkArgument(features.length > 0, "At least one feature must be given");
+    withCommand("start-dev", "--features=" + String.join(",", features));
+    return this;
+  }
+
   @Override
   public void start() {
     super.start();
     httpClient = HttpClient.newHttpClient();
-    String baseUrl = "http://" + getHost() + ":" + getMappedPort(KEYCLOAK_PORT);
+    baseUrl = URI.create("http://" + getHost() + ":" + getMappedPort(KEYCLOAK_PORT));
     issuerUrl = URI.create(baseUrl + "/realms/" + REALM + "/");
     tokenEndpoint = issuerUrl.resolve("protocol/openid-connect/token");
   }
@@ -85,6 +99,16 @@ public class KeycloakContainer extends GenericContainer<KeycloakContainer>
   public void stop() {
     super.stop();
     httpClient = null;
+  }
+
+  @Override
+  public URI getBaseUrl() {
+    return baseUrl;
+  }
+
+  @Override
+  public String getRealm() {
+    return REALM;
   }
 
   @Override
@@ -215,7 +239,8 @@ public class KeycloakContainer extends GenericContainer<KeycloakContainer>
     }
   }
 
-  private String getAdminToken() {
+  @Override
+  public String getAdminToken() {
     return getToken(
         Map.of(
             "grant_type",

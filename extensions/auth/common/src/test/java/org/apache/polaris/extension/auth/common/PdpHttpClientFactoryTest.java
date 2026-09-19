@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.polaris.extension.auth.opa;
+package org.apache.polaris.extension.auth.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,45 +24,48 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.file.Path;
 import java.time.Duration;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.polaris.extension.auth.common.config.ImmutablePdpHttpConfig;
+import org.apache.polaris.extension.auth.common.config.PdpHttpConfig;
+import org.apache.polaris.extension.auth.common.http.PdpHttpClientFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Unit tests for OpaHttpClientFactory. */
-public class OpaHttpClientFactoryTest {
+/** Unit tests for PdpHttpClientFactory. */
+public class PdpHttpClientFactoryTest {
 
   @TempDir Path tempDir;
 
   @Test
   void testCreateHttpClientWithHttpUrl() throws Exception {
-    OpaAuthorizationConfig.HttpConfig httpConfig =
-        ImmutableHttpConfig.builder().timeout(Duration.ofSeconds(5)).verifySsl(true).build();
+    PdpHttpConfig httpConfig =
+        ImmutablePdpHttpConfig.builder().timeout(Duration.ofSeconds(5)).verifySsl(true).build();
 
-    try (CloseableHttpClient client = OpaHttpClientFactory.createHttpClient(httpConfig)) {
+    try (CloseableHttpClient client = PdpHttpClientFactory.createHttpClient(httpConfig)) {
       assertThat(client).isNotNull();
     }
   }
 
   @Test
   void testCreateHttpClientWithHttpsUrl() throws Exception {
-    OpaAuthorizationConfig.HttpConfig httpConfig =
-        ImmutableHttpConfig.builder().timeout(Duration.ofSeconds(5)).verifySsl(false).build();
+    PdpHttpConfig httpConfig =
+        ImmutablePdpHttpConfig.builder().timeout(Duration.ofSeconds(5)).verifySsl(false).build();
 
-    try (CloseableHttpClient client = OpaHttpClientFactory.createHttpClient(httpConfig)) {
+    try (CloseableHttpClient client = PdpHttpClientFactory.createHttpClient(httpConfig)) {
       assertThat(client).isNotNull();
     }
   }
 
   @Test
   void testCreateHttpClientFailsForMissingTrustStore() {
-    OpaAuthorizationConfig.HttpConfig httpConfig =
-        ImmutableHttpConfig.builder()
+    PdpHttpConfig httpConfig =
+        ImmutablePdpHttpConfig.builder()
             .timeout(Duration.ofSeconds(5))
             .verifySsl(true)
             .trustStorePath(tempDir.resolve("missing-truststore.jks"))
             .build();
 
-    assertThatThrownBy(() -> OpaHttpClientFactory.createHttpClient(httpConfig))
+    assertThatThrownBy(() -> PdpHttpClientFactory.createHttpClient(httpConfig))
         .isInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Failed to create HTTP client for OPA communication");
+        .hasMessageContaining("Failed to create HTTP client for PDP communication");
   }
 }

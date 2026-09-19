@@ -28,6 +28,8 @@ description = "Polaris site - reference docs"
 val genProjectPaths = listOf(
   ":polaris-async-api",
   ":polaris-core",
+  ":polaris-extensions-auth-authzen",
+  ":polaris-extensions-auth-common",
   ":polaris-extensions-auth-opa",
   ":polaris-extensions-events-kafka",
   ":polaris-nodes-api",

@@ -60,6 +60,10 @@ All properties listed here are **runtime** properties and can be changed without
 
 {{% include-config-section "smallrye-polaris_authorization_opa" %}}
 
+### `polaris.authorization.authzen`
+
+{{% include-config-section "smallrye-polaris_authorization_authzen" %}}
+
 ### `polaris.oidc`
 
 {{% include-config-section "smallrye-polaris_oidc" %}}

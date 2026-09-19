@@ -54,6 +54,7 @@ dependencies {
   polarisServer(project(path = ":polaris-server", configuration = "quarkusRunner"))
 
   implementation(project(":polaris-core"))
+  implementation(project(":polaris-extensions-auth-common"))
   implementation(libs.apache.httpclient5)
   implementation(platform(libs.jackson.bom))
   implementation("com.fasterxml.jackson.core:jackson-core")

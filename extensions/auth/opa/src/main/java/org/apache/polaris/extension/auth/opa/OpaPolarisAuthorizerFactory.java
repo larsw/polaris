@@ -28,16 +28,15 @@ import jakarta.inject.Inject;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Clock;
-import java.time.Duration;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.auth.PolarisAuthorizerFactory;
 import org.apache.polaris.core.config.RealmConfig;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.context.RequestIdSupplier;
-import org.apache.polaris.extension.auth.opa.token.BearerTokenProvider;
-import org.apache.polaris.extension.auth.opa.token.FileBearerTokenProvider;
-import org.apache.polaris.extension.auth.opa.token.StaticBearerTokenProvider;
+import org.apache.polaris.extension.auth.common.http.PdpHttpClientFactory;
+import org.apache.polaris.extension.auth.common.token.BearerTokenProvider;
+import org.apache.polaris.extension.auth.common.token.BearerTokenProviders;
 import org.apache.polaris.nosql.async.AsyncExec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,7 +140,7 @@ class OpaPolarisAuthorizerFactory implements PolarisAuthorizerFactory {
 
   private CloseableHttpClient createHttpClient() {
     try {
-      return OpaHttpClientFactory.createHttpClient(opaConfig.http());
+      return PdpHttpClientFactory.createHttpClient(opaConfig.http());
     } catch (RuntimeException e) {
       // Misconfigured truststore/timeout/SSL must fail startup rather than silently falling back
       // to a default client (system trust, no response timeout).
@@ -173,35 +172,7 @@ class OpaPolarisAuthorizerFactory implements PolarisAuthorizerFactory {
   }
 
   private BearerTokenProvider createBearerTokenProvider(
-      OpaAuthorizationConfig.BearerTokenConfig bearerToken) {
-    // Check which configuration is present
-    if (bearerToken.staticToken().isPresent()) {
-      OpaAuthorizationConfig.BearerTokenConfig.StaticTokenConfig staticConfig =
-          bearerToken.staticToken().get();
-      return new StaticBearerTokenProvider(staticConfig.value());
-    } else if (bearerToken.fileBased().isPresent()) {
-      OpaAuthorizationConfig.BearerTokenConfig.FileBasedConfig fileConfig =
-          bearerToken.fileBased().get();
-
-      Duration refreshInterval = fileConfig.refreshInterval().orElse(Duration.ofMinutes(5));
-      boolean jwtExpirationRefresh = fileConfig.jwtExpirationRefresh().orElse(true);
-      Duration jwtExpirationBuffer = fileConfig.jwtExpirationBuffer().orElse(Duration.ofMinutes(1));
-      Duration initialTokenWait = fileConfig.initialTokenWait().orElse(Duration.ofSeconds(5));
-      Duration refreshRetryInterval =
-          fileConfig.refreshRetryInterval().orElse(Duration.ofSeconds(1));
-
-      return new FileBearerTokenProvider(
-          fileConfig.path(),
-          refreshInterval,
-          jwtExpirationRefresh,
-          jwtExpirationBuffer,
-          initialTokenWait,
-          refreshRetryInterval,
-          asyncExec,
-          clock::instant);
-    } else {
-      throw new IllegalStateException(
-          "No bearer token configuration found. Must specify either 'static-token' or 'file-based'");
-    }
+      org.apache.polaris.extension.auth.common.config.BearerTokenConfig bearerToken) {
+    return BearerTokenProviders.create(bearerToken, asyncExec, clock);
   }
 }

@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.polaris.extension.auth.opa;
+package org.apache.polaris.extension.auth.common.http;
 
 import java.io.FileInputStream;
 import java.nio.file.Path;
@@ -31,26 +31,28 @@ import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
 import org.apache.hc.core5.ssl.SSLContexts;
 import org.apache.hc.core5.util.Timeout;
+import org.apache.polaris.extension.auth.common.config.PdpHttpConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factory for creating HTTP clients configured for OPA communication with SSL support.
+ * Factory for creating HTTP clients configured for Policy Decision Point (PDP) communication with
+ * SSL support.
  *
  * <p>This factory handles the creation of Apache HttpClient instances with proper SSL
- * configuration, timeout settings, and connection pooling for communicating with Open Policy Agent
- * (OPA) servers.
+ * configuration, timeout settings, and connection pooling for communicating with external PDPs,
+ * such as an Open Policy Agent (OPA) server or an AuthZEN-compliant authorization service.
  */
-class OpaHttpClientFactory {
-  private static final Logger LOGGER = LoggerFactory.getLogger(OpaHttpClientFactory.class);
+public class PdpHttpClientFactory {
+  private static final Logger LOGGER = LoggerFactory.getLogger(PdpHttpClientFactory.class);
 
   /**
-   * Creates a configured HTTP client for OPA communication.
+   * Creates a configured HTTP client for PDP communication.
    *
    * @param config HTTP configuration for timeouts and SSL settings
    * @return configured CloseableHttpClient
    */
-  public static CloseableHttpClient createHttpClient(OpaAuthorizationConfig.HttpConfig config) {
+  public static CloseableHttpClient createHttpClient(PdpHttpConfig config) {
     RequestConfig requestConfig =
         RequestConfig.custom()
             .setResponseTimeout(Timeout.ofMilliseconds(config.timeout().toMillis()))
@@ -71,7 +73,7 @@ class OpaHttpClientFactory {
           .setDefaultRequestConfig(requestConfig)
           .build();
     } catch (Exception e) {
-      throw new RuntimeException("Failed to create HTTP client for OPA communication", e);
+      throw new RuntimeException("Failed to create HTTP client for PDP communication", e);
     }
   }
 
@@ -81,8 +83,7 @@ class OpaHttpClientFactory {
    * @param config HTTP configuration containing SSL settings
    * @return DefaultClientTlsStrategy for HTTPS connections
    */
-  private static DefaultClientTlsStrategy createTlsStrategy(
-      OpaAuthorizationConfig.HttpConfig config) throws Exception {
+  private static DefaultClientTlsStrategy createTlsStrategy(PdpHttpConfig config) throws Exception {
     SSLContext sslContext = createSslContext(config);
 
     if (!config.verifySsl()) {
@@ -100,12 +101,11 @@ class OpaHttpClientFactory {
    * @param config HTTP configuration containing SSL settings
    * @return SSLContext for HTTPS connections
    */
-  private static SSLContext createSslContext(OpaAuthorizationConfig.HttpConfig config)
-      throws Exception {
+  private static SSLContext createSslContext(PdpHttpConfig config) throws Exception {
     if (!config.verifySsl()) {
       // Disable SSL verification (for development/testing)
       LOGGER.warn(
-          "SSL verification is disabled for OPA server. This should only be used in development/testing environments.");
+          "SSL verification is disabled for the PDP server. This should only be used in development/testing environments.");
       return SSLContexts.custom()
           .loadTrustMaterial(
               null, (X509Certificate[] chain, String authType) -> true) // trust all certificates
@@ -113,7 +113,7 @@ class OpaHttpClientFactory {
     } else if (config.trustStorePath().isPresent()) {
       // Load custom trust store for SSL verification
       Path trustStorePath = config.trustStorePath().get();
-      LOGGER.info("Loading custom trust store for OPA SSL verification: {}", trustStorePath);
+      LOGGER.info("Loading custom trust store for PDP SSL verification: {}", trustStorePath);
       KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
       try (FileInputStream trustStoreStream = new FileInputStream(trustStorePath.toFile())) {
         String trustStorePassword = config.trustStorePassword().orElse(null);
@@ -123,7 +123,7 @@ class OpaHttpClientFactory {
       return SSLContexts.custom().loadTrustMaterial(trustStore, null).build();
     } else {
       // Use default system trust store for SSL verification
-      LOGGER.debug("Using default system trust store for OPA SSL verification");
+      LOGGER.debug("Using default system trust store for PDP SSL verification");
       return SSLContexts.createDefault();
     }
   }

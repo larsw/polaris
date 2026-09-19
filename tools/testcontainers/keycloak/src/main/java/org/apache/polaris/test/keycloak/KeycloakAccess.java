@@ -48,6 +48,28 @@ public interface KeycloakAccess {
     return getIssuerUrl().relativize(getTokenEndpoint()).getPath();
   }
 
+  /**
+   * Returns the base URL of the Keycloak server, without any realm path, for example {@code
+   * http://localhost:32768}.
+   */
+  URI getBaseUrl();
+
+  /**
+   * Returns the realm this facade operates on.
+   *
+   * <p>Callers that drive the admin REST API directly need it to build {@code
+   * /admin/realms/<realm>/...} URLs.
+   */
+  String getRealm();
+
+  /**
+   * Obtains an access token for the Keycloak admin REST API.
+   *
+   * <p>Intended for tests that need admin operations this facade does not expose, such as
+   * configuring a client's authorization services.
+   */
+  String getAdminToken();
+
   /** Creates a new role in Keycloak with the specified name. */
   void createRole(String name);
 

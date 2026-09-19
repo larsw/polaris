@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.polaris.extension.auth.opa.token;
+package org.apache.polaris.extension.auth.common.token;
 
 import static com.google.common.base.Preconditions.checkArgument;
 

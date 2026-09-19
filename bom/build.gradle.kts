@@ -96,6 +96,8 @@ dependencies {
 
     api(project(":polaris-relational-jdbc"))
 
+    api(project(":polaris-extensions-auth-authzen"))
+    api(project(":polaris-extensions-auth-common"))
     api(project(":polaris-extensions-auth-opa"))
     api(project(":polaris-extensions-auth-ranger"))
     api(project(":polaris-extensions-events-kafka"))

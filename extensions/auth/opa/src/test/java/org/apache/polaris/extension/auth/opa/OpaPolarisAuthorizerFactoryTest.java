@@ -50,7 +50,11 @@ import org.apache.polaris.core.auth.TargetlessAuthorizationIntent;
 import org.apache.polaris.core.config.RealmConfig;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.persistence.resolver.PolarisResolutionManifest;
-import org.apache.polaris.extension.auth.opa.token.FileBearerTokenProvider;
+import org.apache.polaris.extension.auth.common.config.ImmutableBearerTokenConfig;
+import org.apache.polaris.extension.auth.common.config.ImmutableFileBasedConfig;
+import org.apache.polaris.extension.auth.common.config.ImmutablePdpHttpConfig;
+import org.apache.polaris.extension.auth.common.config.ImmutableStaticTokenConfig;
+import org.apache.polaris.extension.auth.common.token.FileBearerTokenProvider;
 import org.apache.polaris.nosql.async.java.JavaPoolAsyncExec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -77,7 +81,7 @@ public class OpaPolarisAuthorizerFactoryTest {
                             .build())
                     .build())
             .http(
-                ImmutableHttpConfig.builder()
+                ImmutablePdpHttpConfig.builder()
                     .timeout(Duration.ofSeconds(2))
                     .verifySsl(true)
                     .build())
@@ -123,7 +127,7 @@ public class OpaPolarisAuthorizerFactoryTest {
                             .build())
                     .build())
             .http(
-                ImmutableHttpConfig.builder()
+                ImmutablePdpHttpConfig.builder()
                     .timeout(Duration.ofSeconds(2))
                     .verifySsl(true)
                     .build())
@@ -170,7 +174,7 @@ public class OpaPolarisAuthorizerFactoryTest {
                     .type(OpaAuthorizationConfig.AuthenticationType.NONE)
                     .build())
             .http(
-                ImmutableHttpConfig.builder()
+                ImmutablePdpHttpConfig.builder()
                     .timeout(Duration.ofSeconds(2))
                     .verifySsl(true)
                     .build())
@@ -208,7 +212,7 @@ public class OpaPolarisAuthorizerFactoryTest {
                       .type(OpaAuthorizationConfig.AuthenticationType.NONE)
                       .build())
               .http(
-                  ImmutableHttpConfig.builder()
+                  ImmutablePdpHttpConfig.builder()
                       .timeout(Duration.ofSeconds(2))
                       .verifySsl(true)
                       .build())
@@ -267,7 +271,7 @@ public class OpaPolarisAuthorizerFactoryTest {
                       .type(OpaAuthorizationConfig.AuthenticationType.NONE)
                       .build())
               .http(
-                  ImmutableHttpConfig.builder()
+                  ImmutablePdpHttpConfig.builder()
                       .timeout(Duration.ofSeconds(2))
                       .verifySsl(true)
                       .build())
@@ -325,7 +329,7 @@ public class OpaPolarisAuthorizerFactoryTest {
                       .type(OpaAuthorizationConfig.AuthenticationType.NONE)
                       .build())
               .http(
-                  ImmutableHttpConfig.builder()
+                  ImmutablePdpHttpConfig.builder()
                       .timeout(Duration.ofSeconds(2))
                       .verifySsl(true)
                       .build())
@@ -387,7 +391,7 @@ public class OpaPolarisAuthorizerFactoryTest {
                       .type(OpaAuthorizationConfig.AuthenticationType.NONE)
                       .build())
               .http(
-                  ImmutableHttpConfig.builder()
+                  ImmutablePdpHttpConfig.builder()
                       .timeout(Duration.ofSeconds(2))
                       .verifySsl(true)
                       .build())
@@ -463,7 +467,7 @@ public class OpaPolarisAuthorizerFactoryTest {
                     .type(OpaAuthorizationConfig.AuthenticationType.NONE)
                     .build())
             .http(
-                ImmutableHttpConfig.builder()
+                ImmutablePdpHttpConfig.builder()
                     .timeout(Duration.ofSeconds(2))
                     .verifySsl(true)
                     .trustStorePath(missingTrustStore)

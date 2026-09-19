@@ -67,8 +67,8 @@ import org.apache.polaris.core.entity.PolarisEntityType;
 import org.apache.polaris.core.persistence.PolarisResolvedPathWrapper;
 import org.apache.polaris.core.persistence.ResolvedPolarisEntity;
 import org.apache.polaris.core.persistence.resolver.PolarisResolutionManifest;
-import org.apache.polaris.extension.auth.opa.token.BearerTokenProvider;
-import org.apache.polaris.extension.auth.opa.token.StaticBearerTokenProvider;
+import org.apache.polaris.extension.auth.common.token.BearerTokenProvider;
+import org.apache.polaris.extension.auth.common.token.StaticBearerTokenProvider;
 import org.junit.jupiter.api.Test;
 
 /**

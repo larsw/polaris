@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.polaris.extension.auth.opa.token;
+package org.apache.polaris.extension.auth.common.token;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -106,7 +106,7 @@ public class FileBearerTokenProvider implements BearerTokenProvider {
     this.clock = clock;
     this.asyncExec = asyncExec;
 
-    checkState(Files.isReadable(tokenFilePath), "OPA token file does not exist or is not readable");
+    checkState(Files.isReadable(tokenFilePath), "PDP token file does not exist or is not readable");
 
     this.nextRefresh = Instant.MIN;
     this.lastRefresh = Instant.MIN;
@@ -136,7 +136,7 @@ public class FileBearerTokenProvider implements BearerTokenProvider {
     try {
       return initialTokenFuture.get(initialTokenWaitMillis, TimeUnit.MILLISECONDS);
     } catch (Exception e) {
-      throw new IllegalStateException("Failed to read initial OPA bearer token", e);
+      throw new IllegalStateException("Failed to read initial PDP bearer token", e);
     }
   }
 

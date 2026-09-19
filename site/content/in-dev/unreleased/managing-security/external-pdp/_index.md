@@ -60,6 +60,7 @@ When using an external PDP, Polaris delegates authorization decisions as follows
 Apache Polaris currently supports the following external PDP integrations:
 
 - **[Open Policy Agent (OPA)]({{< relref "opa.md" >}})**: A general-purpose policy engine with a rich ecosystem and flexible policy language (Rego)
+- **[AuthZEN]({{< relref "authzen.md" >}})**: The vendor-neutral OpenID AuthZEN Authorization API, supported by Keycloak, Cerbos, Topaz and others
 
 ## Configuration
 

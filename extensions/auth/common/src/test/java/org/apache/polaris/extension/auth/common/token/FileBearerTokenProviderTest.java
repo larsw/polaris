@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.polaris.extension.auth.opa.token;
+package org.apache.polaris.extension.auth.common.token;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -67,7 +67,7 @@ public class FileBearerTokenProviderTest {
       // initial refresh has not happened yet, getToken() times out waiting for the initial token
       assertThatIllegalStateException()
           .isThrownBy(provider::getToken)
-          .withMessage("Failed to read initial OPA bearer token");
+          .withMessage("Failed to read initial PDP bearer token");
 
       // initial refresh should have been scheduled, run it
       assertThat(asyncExec.readyCount()).isEqualTo(1);
@@ -77,7 +77,7 @@ public class FileBearerTokenProviderTest {
       // Token file is still empty, getToken() still times out waiting for the initial token
       assertThatIllegalStateException()
           .isThrownBy(provider::getToken)
-          .withMessage("Failed to read initial OPA bearer token");
+          .withMessage("Failed to read initial PDP bearer token");
 
       monotonicClock.advanceBoth(Duration.ofSeconds(1));
       // refresh should have been scheduled, run it
@@ -88,7 +88,7 @@ public class FileBearerTokenProviderTest {
       // Token file is still empty, getToken() still times out waiting for the initial token
       assertThatIllegalStateException()
           .isThrownBy(provider::getToken)
-          .withMessage("Failed to read initial OPA bearer token");
+          .withMessage("Failed to read initial PDP bearer token");
 
       String expectedToken = "test-bearer-token-123";
       Files.writeString(tokenFile, expectedToken);
@@ -228,7 +228,7 @@ public class FileBearerTokenProviderTest {
                         monotonicClock::currentInstant)
                     .close())
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("OPA token file does not exist or is not readable");
+        .hasMessageContaining("PDP token file does not exist or is not readable");
 
     // No refresh tasks should be scheduled when construction fails fast.
     assertThat(asyncExec.tasks()).isEmpty();

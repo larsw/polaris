@@ -71,6 +71,13 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
   and a subsequent `bootstrap` would create a second, empty set of tables in the other schema.
   Either remove the setting from the URL, or point it at the schema that already holds your
   Polaris tables.
+- The bearer-token providers and the HTTP client factory of the OPA authorization extension moved
+  from `polaris-extensions-auth-opa` to a new `polaris-extensions-auth-common` artifact, so the
+  AuthZEN extension can share them: `org.apache.polaris.extension.auth.opa.token.*` is now
+  `org.apache.polaris.extension.auth.common.token.*`, and `OpaHttpClientFactory` is now
+  `org.apache.polaris.extension.auth.common.http.PdpHttpClientFactory`. Every
+  `polaris.authorization.opa.*` configuration property is unchanged, so deployments are unaffected;
+  only code compiled against those classes needs updating.
 - PolarisAuthorizer inputs now reflect the intent-based authorization SPI more directly. Resource
   targets and parent paths no longer include Polaris's internal synthetic `ROOT` container. For
   example, catalog targets now have empty parent paths, root-scoped operations such as
@@ -88,6 +95,15 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### New Features
 
+- Polaris can now delegate authorization to any Policy Decision Point implementing the OpenID
+  AuthZEN Authorization API 1.0, by setting `polaris.authorization.type=authzen` and pointing
+  `polaris.authorization.authzen.pdp-uri` at the PDP. Endpoints are discovered from the PDP's
+  `.well-known/authzen-configuration` document, the intents of one authorization request are
+  batched into a single Access Evaluations call, and the payload can be shaped per PDP through
+  `polaris.authorization.authzen.mapping.*`. Authentication to the PDP supports OAuth2
+  client-credentials as well as static and file-based bearer tokens. Verified end-to-end against
+  Keycloak 26.7 with its experimental `authzen` feature. Like the OPA integration, this is a
+  preview feature. See the AuthZEN integration documentation for details.
 - Semantic models now support dedicated privileges for listing, creating, reading, updating,
   and dropping. Privileges can be granted to catalog roles on individual models or at namespace
   or catalog scope, with separate controls for managing model grants.
