@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -181,10 +182,14 @@ class AuthzenPdpClient {
       // switched on in a distributed build. The payload names principals, roles and resources,
       // which the denial log at this level already does.
       LOGGER.debug("POST {} {}", endpoint, json);
-      HttpPost httpPost = new HttpPost(endpoint);
-      httpPost.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
-      applyCommonHeaders(httpPost, requestId);
-      return httpClientExecute(httpPost, response -> readJson(response, endpoint));
+      return executeWithTokenRetry(
+          () -> {
+            HttpPost httpPost = new HttpPost(endpoint);
+            httpPost.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
+            applyCommonHeaders(httpPost, requestId);
+            return httpPost;
+          },
+          endpoint);
     } catch (IOException e) {
       throw new RuntimeException("AuthZEN access evaluation failed", e);
     }
@@ -216,9 +221,14 @@ class AuthzenPdpClient {
   private PdpMetadata fetchMetadata(URI pdpUri) {
     URI discoveryUri = discoveryUri(pdpUri);
     try {
-      HttpGet httpGet = new HttpGet(discoveryUri);
-      applyCommonHeaders(httpGet, null);
-      JsonNode metadata = httpClientExecute(httpGet, response -> readJson(response, discoveryUri));
+      JsonNode metadata =
+          executeWithTokenRetry(
+              () -> {
+                HttpGet httpGet = new HttpGet(discoveryUri);
+                applyCommonHeaders(httpGet, null);
+                return httpGet;
+              },
+              discoveryUri);
       if (metadata == null) {
         throw new IllegalStateException(
             "AuthZEN PDP metadata request to " + discoveryUri + " did not return HTTP 200");
@@ -266,6 +276,13 @@ class AuthzenPdpClient {
     } catch (ParseException e) {
       throw new IOException("Failed to parse AuthZEN PDP response", e);
     }
+    if (statusCode == 401) {
+      // Not a decision: the PDP refused the credential rather than answering the question.
+      // Signalled separately so the caller can replace the token and ask again. 403 is
+      // deliberately not treated this way -- a PDP may legitimately use it to say that this
+      // client is not permitted to ask, which retrying would not fix.
+      throw new TokenRejectedException(statusCode, responseBody);
+    }
     if (statusCode != 200) {
       // A PDP explains a rejected request in the body, which is what makes a payload mismatch
       // diagnosable; it is not expected to contain anything sensitive.
@@ -278,6 +295,71 @@ class AuthzenPdpClient {
     }
     LOGGER.debug("AuthZEN PDP at {} answered {}", endpoint, responseBody);
     return objectMapper.readTree(responseBody);
+  }
+
+  /**
+   * Runs a request, and if the PDP rejects the bearer token, replaces the token and runs it once
+   * more.
+   *
+   * <p>A rejected token is not a decision, and answering "deny" to it is wrong twice over: the
+   * caller is refused something they may well be entitled to, and the condition is permanent,
+   * because nothing else will ever tell the token provider that what it is holding is no longer
+   * accepted. The most ordinary cause is the PDP's signing keys being rotated while Polaris holds
+   * a token that has not yet reached its own expiry.
+   *
+   * <p>Retried exactly once. If the fresh token is refused too, the problem is the credential or
+   * the policy, not staleness, and the request fails closed as before.
+   */
+  private @Nullable JsonNode executeWithTokenRetry(
+      Supplier<ClassicHttpRequest> requestFactory, URI endpoint) throws IOException {
+    try {
+      return httpClientExecute(requestFactory.get(), response -> readJson(response, endpoint));
+    } catch (TokenRejectedException rejected) {
+      if (tokenProvider == null) {
+        LOGGER.warn(
+            "AuthZEN PDP at {} returned unexpected HTTP status {}, treating as deny: {}",
+            endpoint,
+            rejected.statusCode(),
+            rejected.body());
+        return null;
+      }
+      LOGGER.info(
+          "AuthZEN PDP at {} rejected the bearer token (HTTP {}); replacing it and retrying once",
+          endpoint,
+          rejected.statusCode());
+      tokenProvider.invalidate();
+      try {
+        return httpClientExecute(requestFactory.get(), response -> readJson(response, endpoint));
+      } catch (TokenRejectedException stillRejected) {
+        LOGGER.warn(
+            "AuthZEN PDP at {} rejected the replacement bearer token too (HTTP {}), treating as"
+                + " deny: {}",
+            endpoint,
+            stillRejected.statusCode(),
+            stillRejected.body());
+        return null;
+      }
+    }
+  }
+
+  /** The PDP refused the credential rather than answering the question. */
+  private static final class TokenRejectedException extends IOException {
+    private final int statusCode;
+    private final String body;
+
+    TokenRejectedException(int statusCode, String body) {
+      super("AuthZEN PDP returned HTTP " + statusCode);
+      this.statusCode = statusCode;
+      this.body = body;
+    }
+
+    int statusCode() {
+      return statusCode;
+    }
+
+    String body() {
+      return body;
+    }
   }
 
   @VisibleForTesting

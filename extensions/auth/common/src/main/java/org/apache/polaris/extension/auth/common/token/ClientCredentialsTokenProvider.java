@@ -86,6 +86,11 @@ public class ClientCredentialsTokenProvider implements BearerTokenProvider {
   private volatile @Nullable Cancelable<?> refreshTask;
   private volatile boolean closed;
 
+  // Guards a forced re-fetch triggered by a rejected token, so that a rejection seen by many
+  // in-flight requests at once results in one token request rather than one per request.
+  private final Object forcedRefreshLock = new Object();
+  private volatile Instant lastForcedRefresh = Instant.MIN;
+
   /**
    * Creates a client-credentials token provider and immediately schedules the first token fetch.
    *
@@ -147,6 +152,44 @@ public class ClientCredentialsTokenProvider implements BearerTokenProvider {
     } catch (Exception e) {
       throw new IllegalStateException(
           "Failed to obtain initial PDP bearer token from " + tokenEndpoint, e);
+    }
+  }
+
+  @Override
+  public void invalidate() {
+    if (closed) {
+      return;
+    }
+    String rejected = cachedToken;
+    synchronized (forcedRefreshLock) {
+      String current = cachedToken;
+      if (current != null && !current.equals(rejected)) {
+        // Another request hit the same rejection first and has already replaced it.
+        return;
+      }
+      Instant now = clock.get();
+      if (now.isBefore(lastForcedRefresh.plus(refreshRetryInterval))) {
+        // Credentials that are simply wrong are rejected on every request, and fetching a
+        // new token each time would turn one misconfiguration into a flood at the token
+        // endpoint. One forced fetch per retry interval is enough to recover from a
+        // rotation without becoming that flood.
+        LOGGER.debug(
+            "PDP bearer token was rejected again within {}, not re-fetching yet",
+            refreshRetryInterval);
+        return;
+      }
+      lastForcedRefresh = now;
+
+      if (doRefreshToken()) {
+        LOGGER.info(
+            "Replaced the client-credentials token for client {} after it was rejected", clientId);
+        // The scheduled refresh was aimed at the old token's expiry; re-aim it.
+        Cancelable<?> task = refreshTask;
+        if (task != null) {
+          task.cancel();
+        }
+        scheduleRefreshAttempt(Duration.between(clock.get(), nextRefresh));
+      }
     }
   }
 

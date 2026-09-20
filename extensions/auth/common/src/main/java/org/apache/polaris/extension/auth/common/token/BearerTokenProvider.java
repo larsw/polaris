@@ -41,6 +41,24 @@ public interface BearerTokenProvider extends AutoCloseable {
   @Nullable String getToken();
 
   /**
+   * Discards the current token because its consumer was told it is not acceptable, and obtains a
+   * replacement.
+   *
+   * <p>A scheduled refresh only knows when a token is due to <em>expire</em>. It cannot know that a
+   * token stopped being valid early -- because the issuer's signing keys were rotated, or the
+   * client's session was revoked -- and until something says so, every request keeps presenting the
+   * same rejected credential. This is how the consumer says so.
+   *
+   * <p>Implementations must tolerate being called concurrently and often: a rejection is typically
+   * observed by every in-flight request at once, and a credential that is simply wrong would
+   * otherwise become an unbounded stream of token requests.
+   *
+   * <p>The default does nothing, which is correct for a provider whose token cannot go stale
+   * without its own refresh noticing -- a static one, say.
+   */
+  default void invalidate() {}
+
+  /**
    * Clean up any resources used by this token provider. Should be called when the provider is no
    * longer needed.
    */
