@@ -43,6 +43,7 @@ final class StubAuthzenPdp implements AutoCloseable {
   private final List<String> bodies = new ArrayList<>();
   private final List<Map<String, String>> headers = new ArrayList<>();
   private final Map<String, Response> responses = new ConcurrentHashMap<>();
+  private final Map<String, java.util.Queue<Response>> oneShot = new ConcurrentHashMap<>();
   private final boolean advertiseBatchEndpoint;
 
   StubAuthzenPdp() throws IOException {
@@ -70,6 +71,18 @@ final class StubAuthzenPdp implements AutoCloseable {
   /** Scripts the response of the batch endpoint. */
   void onEvaluations(int status, String body) {
     responses.put("batch", new Response(status, body));
+  }
+
+  /**
+   * Scripts one response of the single-evaluation endpoint, used for the next request only.
+   *
+   * <p>Queued responses are served before the sticky one, so a transient failure can be followed
+   * by the normal answer.
+   */
+  void onNextEvaluation(int status, String body) {
+    oneShot
+        .computeIfAbsent("single", key -> new java.util.concurrent.ConcurrentLinkedQueue<>())
+        .add(new Response(status, body));
   }
 
   /** The bodies of the evaluation requests received so far, in order. */
@@ -118,7 +131,12 @@ final class StubAuthzenPdp implements AutoCloseable {
           .forEach((name, values) -> captured.put(name, String.join(",", values)));
       headers.add(captured);
     }
-    Response response = responses.getOrDefault(key, new Response(200, "{\"decision\":true}"));
+    java.util.Queue<Response> queued = oneShot.get(key);
+    Response oneShotResponse = queued == null ? null : queued.poll();
+    Response response =
+        oneShotResponse != null
+            ? oneShotResponse
+            : responses.getOrDefault(key, new Response(200, "{\"decision\":true}"));
     respond(exchange, response.status(), response.body());
   }
 
